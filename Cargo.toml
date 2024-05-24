@@ -4,3 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+bus = "2.4.1"
+thiserror = "*"
+anyhow = "*"
+tracing = "*"
+
+[dev-dependencies]
+tracing-subscriber = { version = "0.3", default-features = false, features = [
+  "env-filter",
+  "fmt",
+] }
