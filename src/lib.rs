@@ -169,6 +169,13 @@ pub struct Subscriber<T> {
 }
 
 impl<T: Debug + Clone> Subscriber<T> {
+    pub fn try_recv(&self) -> Result<T, Error<T>> {
+        trace!("subscriber {:?} is going to recv now", self.name);
+        let value = self.receiver.inner.try_recv()?;
+        trace!("subscriber {:?} has received '{value:?}'", self.name);
+        Ok(value)
+    }
+
     pub fn recv(&self) -> Result<T, Error<T>> {
         trace!("subscriber {:?} is going to recv now", self.name);
         let value = self.receiver.inner.recv()?;
@@ -209,6 +216,8 @@ pub enum Error<T> {
     RecvError(#[from] mpsc::RecvError),
     #[error(transparent)]
     SendError(#[from] mpsc::SendError<T>),
+    #[error(transparent)]
+    TryRecvError(#[from] mpsc::TryRecvError),
 }
 
 #[cfg(test)]
