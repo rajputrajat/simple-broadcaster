@@ -141,6 +141,13 @@ impl<T> Debug for Broadcaster<T> {
     }
 }
 
+pub trait CloneAs<N>
+where
+    N: Into<Cow<'static, str>>,
+{
+    fn clone_as(&self, name: N) -> Self;
+}
+
 impl<T: Debug + Clone> Clone for Broadcaster<T> {
     fn clone(&self) -> Self {
         self.clone_as(format!("anonymous. cloned from {}", self.name))
@@ -153,8 +160,14 @@ impl<T: Clone + Debug> Broadcaster<T> {
         #[allow(clippy::unwrap_used)]
         (*self.inner).lock().unwrap().broadcast(message)
     }
+}
 
-    pub fn clone_as<N: Into<Cow<'static, str>>>(&self, name: N) -> Self {
+impl<T, N> CloneAs<N> for Broadcaster<T>
+where
+    T: Clone + Debug,
+    N: Into<Cow<'static, str>>,
+{
+    fn clone_as(&self, name: N) -> Self {
         let name = name.into();
         trace!(
             "Broadcaster {name:?} is cloned from {:?}. total count # {}",
@@ -188,8 +201,14 @@ impl<T: Debug + Clone> Subscriber<T> {
         trace!("subscriber {:?} has received '{value:?}'", self.name);
         Ok(value)
     }
+}
 
-    pub fn clone_as<N: Into<Cow<'static, str>>>(&self, name: N) -> Self {
+impl<T, N> CloneAs<N> for Subscriber<T>
+where
+    T: Clone + Debug,
+    N: Into<Cow<'static, str>>,
+{
+    fn clone_as(&self, name: N) -> Self {
         #[allow(clippy::unwrap_used)]
         let receiver = (*self.inner).lock().unwrap().add_receiver();
         let name = name.into();
@@ -214,6 +233,12 @@ impl<T> Debug for Subscriber<T> {
     }
 }
 
+impl<T: Debug + Clone> Clone for Subscriber<T> {
+    fn clone(&self) -> Self {
+        self.clone_as(format!("anonymous. cloned from {}", self.name))
+    }
+}
+
 #[derive(Debug, ThisError)]
 pub enum Error<T> {
     #[error("receiver is not there in the option")]
@@ -235,9 +260,12 @@ impl From<Subscriber<()>> for Canceller {
     }
 }
 
-impl<T: Debug + Clone> Clone for Subscriber<T> {
-    fn clone(&self) -> Self {
-        self.clone_as(format!("anonymous. cloned from {}", self.name))
+impl<N> CloneAs<N> for Canceller
+where
+    N: Into<Cow<'static, str>>,
+{
+    fn clone_as(&self, name: N) -> Self {
+        Self(self.0.clone_as(name))
     }
 }
 
