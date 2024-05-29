@@ -141,6 +141,12 @@ impl<T> Debug for Broadcaster<T> {
     }
 }
 
+impl<T: Debug + Clone> Clone for Broadcaster<T> {
+    fn clone(&self) -> Self {
+        self.clone_as(format!("anonymous. cloned from {}", self.name))
+    }
+}
+
 impl<T: Clone + Debug> Broadcaster<T> {
     pub fn broadcast(&self, message: T) -> Result<(), Error<T>> {
         trace!("broadcaster {:?} is broadcasting '{message:?}'", self.name);
@@ -220,11 +226,18 @@ pub enum Error<T> {
     TryRecvError(#[from] mpsc::TryRecvError),
 }
 
+#[derive(Debug, Clone)]
 pub struct Canceller(pub Subscriber<()>);
 
 impl From<Subscriber<()>> for Canceller {
     fn from(value: Subscriber<()>) -> Self {
         Self(value)
+    }
+}
+
+impl<T: Debug + Clone> Clone for Subscriber<T> {
+    fn clone(&self) -> Self {
+        self.clone_as(format!("anonymous. cloned from {}", self.name))
     }
 }
 
