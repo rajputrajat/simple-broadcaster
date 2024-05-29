@@ -220,6 +220,14 @@ pub enum Error<T> {
     TryRecvError(#[from] mpsc::TryRecvError),
 }
 
+pub struct Canceller(pub Subscriber<()>);
+
+impl From<Subscriber<()>> for Canceller {
+    fn from(value: Subscriber<()>) -> Self {
+        Self(value)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
