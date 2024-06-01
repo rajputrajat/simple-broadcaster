@@ -4,7 +4,7 @@ use std::{
     sync::{mpsc, Arc, Mutex},
 };
 use thiserror::Error as ThisError;
-use tracing::{self, error, trace};
+use tracing::{self, error, trace, warn};
 
 #[derive(Copy, Debug)]
 struct UniqueId(u64);
@@ -73,7 +73,7 @@ impl<T: Clone + Debug> BroadcasterInner<T> {
         for sender in &self.senders {
             trace!("sender # {sender:?} is sending");
             if sender.inner.send(message.clone()).is_err() {
-                error!("sender # {sender:?} failed while broadcasting")
+                warn!("sender # {sender:?} failed while broadcasting");
             }
         }
     }
