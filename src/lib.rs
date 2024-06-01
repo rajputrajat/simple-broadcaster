@@ -4,7 +4,7 @@ use std::{
     sync::{mpsc, Arc, Mutex},
 };
 use thiserror::Error as ThisError;
-use tracing::{self, trace};
+use tracing::{self, error, trace};
 
 #[derive(Copy, Debug)]
 struct UniqueId(u64);
@@ -65,16 +65,17 @@ impl<T> Debug for BroadcasterInner<T> {
 }
 
 impl<T: Clone + Debug> BroadcasterInner<T> {
-    fn broadcast(&self, message: T) -> Result<(), Error<T>> {
+    fn broadcast(&self, message: T) {
         trace!(
             "broadcasting '{message:?}' to '{}' senders",
             self.senders.len()
         );
         for sender in &self.senders {
-            trace!("sender # {:?} is sending", sender);
-            sender.inner.send(message.clone())?;
+            trace!("sender # {sender:?} is sending");
+            if sender.inner.send(message.clone()).is_err() {
+                error!("sender # {sender:?} failed while broadcasting")
+            }
         }
-        Ok(())
     }
 
     fn add_receiver(&mut self) -> MpscReceiver<T> {
@@ -155,10 +156,10 @@ impl<T: Debug + Clone> Clone for Broadcaster<T> {
 }
 
 impl<T: Clone + Debug> Broadcaster<T> {
-    pub fn broadcast(&self, message: T) -> Result<(), Error<T>> {
+    pub fn broadcast(&self, message: T) {
         trace!("broadcaster {:?} is broadcasting '{message:?}'", self.name);
         #[allow(clippy::unwrap_used)]
-        (*self.inner).lock().unwrap().broadcast(message)
+        (*self.inner).lock().unwrap().broadcast(message);
     }
 }
 
@@ -286,7 +287,7 @@ mod tests {
             .map(|i| s.clone_as(format!("sub#{i}")))
             .collect::<Vec<_>>();
         thread::spawn(move || {
-            let _ = b1.broadcast(FIRST);
+            b1.broadcast(FIRST);
         });
         assert_eq!(s1.recv()?, FIRST);
         assert_eq!(s.recv()?, FIRST);
@@ -311,8 +312,8 @@ mod tests {
             .map(|i| s.clone_as(format!("sub#{i}")))
             .collect::<Vec<_>>();
         thread::spawn(move || {
-            let _ = b1.broadcast(FIRST);
-            let _ = b1.broadcast(SECOND);
+            b1.broadcast(FIRST);
+            b1.broadcast(SECOND);
         });
         assert_eq!(s1.recv()?, FIRST);
         assert_eq!(s.recv()?, FIRST);
@@ -345,7 +346,7 @@ mod tests {
                 }
             });
             thread::spawn(move || {
-                let _ = b_1.broadcast("hello there");
+                b_1.broadcast("hello there");
             });
         });
     }
